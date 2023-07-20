@@ -5,18 +5,44 @@ from OpenGL.GLUT import *
 import numpy as np
 import pandas as pd
 
+pos_temp = []
 def display():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     gluLookAt(*(centroid+(0, 10, max(bbox))), *centroid, 0, 1, 0)
     glRotatef(degree, 0, 1, 0)
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
     glBegin(GL_TRIANGLES)
     for i in range(n_vertices):
         glColor3fv(0.5 * (normals[i] + 1))
         glVertex3fv(positions[i])
     glEnd()
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
+    glBegin(GL_TRIANGLES)
+    for j in range(n_vertices):
+        glColor3fv(colors[j])
+        glVertex3fv(positions[j])
+    glEnd()
+    glBegin(GL_LINES)
+    for k in range(n_vertices):
+        pos_temp.append(positions[k])
+        if (len(pos_temp) == 3):
+            a = np.matrix(pos_temp.pop())
+            b = np.matrix(pos_temp.pop())
+            c = np.matrix(pos_temp.pop())
+            drawVertexNorm(a,b,c)
+    glEnd()
     glutSwapBuffers()
+
+def drawVertexNorm(p1,p2,p3):
+    
+    center = (p1+p2+p3)/3
+    n = np.cross(p2-p1,p3-p1)
+    glColor3f(0.0, 1.0, 0.0)
+    glVertex3fv(center)
+    glColor3f(1.0, 0.0, 0.0)
+    glVertex3fv(center - (n * norm_length))
 
 def reshape(w, h):
     glViewport(0, 0, w, h)
@@ -29,10 +55,12 @@ def idle():
     global degree
     degree = degree + 1
     glutPostRedisplay()
-
+norm_length = 1
 wireframe, animation = False, False
 def keyboard(key, x, y):
     global wireframe, animation
+    global norm_length
+    
 
     key = key.decode("utf-8")
     if key == ' ':
@@ -43,6 +71,10 @@ def keyboard(key, x, y):
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE if wireframe else GL_FILL)
     elif key == 'q':
         os._exit(0)
+    elif key == '+':
+        norm_length += 1
+    elif key == '-':
+        norm_length -= 1
     glutPostRedisplay()
 
 def my_init():
@@ -63,6 +95,7 @@ def my_init():
     print("no. of vertices: %d, no. of triangles: %d" % 
           (n_vertices, n_vertices//3))    
     print("Centroid: ", centroid)
+    print(positions)
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LEQUAL)
     glLineWidth(1)
