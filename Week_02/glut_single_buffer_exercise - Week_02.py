@@ -9,7 +9,7 @@ def display():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glBegin(GL_TRIANGLES)
     for i in range(n_vertices):
-        glColor3fv(colors[i])
+        glColor3fv(0.5 * (normals + 1)[i])
         glVertex3fv(positions[i])
     glEnd()
     glutSwapBuffers()
@@ -53,7 +53,7 @@ def my_init():
     n_vertices = len(positions)
     print("no. of vertices: %d, no. of triangles: %d" % 
           (n_vertices, n_vertices//3))
-    glEnable(GLUT_DEPTH_TEST)
+    glEnable(GL_DEPTH_TEST)
 
 def main():
     glutInit(sys.argv)
