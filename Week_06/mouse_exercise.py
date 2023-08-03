@@ -2,6 +2,7 @@ import sys, os
 from OpenGL.GLUT import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
+import math as m
 
 win_w, win_h = 1024, 768
 t_value, wireframe, pause = 0, False, True
@@ -48,14 +49,32 @@ def display():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
+    #glLightfv(GL_LIGHT0, GL_POSITION, 
+    #   [-1.5*m.cos(theta/180*m.pi), 0, 1.5*m.sin(theta/180*m.pi), 1])
     gluLookAt(3, 0, 0, 0, 0, 0, 0, 1, 0)
     glColor3f(0, 1, 1)
-    glutWireTeapot(1)
+    # glLightfv(GL_LIGHT0, GL_POSITION, [-1.5, 0, 0, 1])
+    glRotate(theta, 0, 1, 0)
+    glutSolidTeapot(1)
     glutSwapBuffers()
+
+
+theta = 0
+def idle():
+    global theta
+    theta = theta + 0.1
+    print(theta)
+    glutPostRedisplay()
 
 def init_gl():
     glClearColor(0.01, 0.01, 0.2, 0)
     glEnable(GL_DEPTH_TEST)
+    glEnable(GL_LIGHTING)
+    glEnable(GL_LIGHT0)
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, [1, 1, 0, 0])
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [1, 0, 0, 0])
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, [50])
+    glLightfv(GL_LIGHT0, GL_POSITION, [-1.5, 0, 0, 1])
     glShadeModel(GL_SMOOTH)
 
 def main():  

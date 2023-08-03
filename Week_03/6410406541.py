@@ -27,22 +27,18 @@ def display():
     glBegin(GL_LINES)
     for k in range(n_vertices):
         pos_temp.append(positions[k])
-        if (len(pos_temp) == 3):
-            a = np.matrix(pos_temp.pop())
-            b = np.matrix(pos_temp.pop())
-            c = np.matrix(pos_temp.pop())
-            drawVertexNorm(a,b,c)
+        glColor3f(0.0, 1.0, 0.0)
+        glVertex3fv()
+        drawVertexNorm(normals[k])
     glEnd()
     glutSwapBuffers()
 
-def drawVertexNorm(p1,p2,p3):
+def drawVertexNorm(list normal):
     
-    center = (p1+p2+p3)/3
-    n = np.cross(p2-p1,p3-p1)
-    glColor3f(0.0, 1.0, 0.0)
-    glVertex3fv(center)
+    
+    
     glColor3f(1.0, 0.0, 0.0)
-    glVertex3fv(center - (n * norm_length))
+    glVertex3fv(center - (normal * norm_length))
 
 def reshape(w, h):
     glViewport(0, 0, w, h)
@@ -55,8 +51,9 @@ def idle():
     global degree
     degree = degree + 1
     glutPostRedisplay()
-norm_length = 1
+
 wireframe, animation = False, False
+norm_length = 1
 def keyboard(key, x, y):
     global wireframe, animation
     global norm_length
