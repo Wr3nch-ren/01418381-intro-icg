@@ -7,6 +7,7 @@ import pandas as pd
 import math as m
 
 t_value = 0
+mouse_pos_x = 0
 
 def reshape(w, h):
     glViewport(0, 0, w, h)	
@@ -18,18 +19,38 @@ def display():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
-    eye_pos = centroid + (0, 1, 1.2*max(bbox))
+    #eye_pos = centroid + (0, 1, 1.2*max(bbox))
+    eye_pos = (0, 1, 2)
     eye_at = centroid
 
     gluLookAt(*eye_pos, *eye_at, 0, 1, 0)
 
-    light_ambient = [1.0, 1.0, 1.0, 1.0]
-    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient)
+    light_position = [3.0, 4.0, 20.0, 1.0]
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position)
 
-    mat_ambient = [0.8, 0.8, 0.8, 1.0]
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_ambient)
-
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glPushMatrix()
     glRotatef(t_value, 0, 1, 0)
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position)
+    glPopMatrix()
+    
+    #light_ambient = [1.0, 1.0, 1.0, 1.0]
+    light_intensity = [1.0, 1.0, 1.0, 1.0]
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_intensity)
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_intensity)
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light_intensity)
+    
+    #mat_ambient = [0.8, 0.8, 0.8, 1.0]
+    mat_ambient = [0.05, 0.05, 0.05, 1.0]
+    mat_diffuse = [0.86, 0.65, 0.13, 1.0]
+    mat_specular = [1.0, 1.0, 0.0, 1.0]
+    mat_shininess = 50
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, mat_ambient)
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_diffuse)
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_specular)
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mat_shininess)
+    
+    #glRotatef(t_value, 0, 1, 0)
 
     glVertexPointer(3, GL_FLOAT, 0, positions)
     glColorPointer(3, GL_FLOAT, 0, colors)
@@ -51,6 +72,13 @@ def keyboard(key, x, y):
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE if wireframe else GL_FILL)
     elif key == 'q':
         os._exit(0)
+    glutPostRedisplay()
+
+def motion(x, y):
+    global mouse_pos_x
+    global t_value
+    mouse_pos_x = x
+    t_value = mouse_pos_x
     glutPostRedisplay()
 
 def idle():
@@ -98,6 +126,7 @@ def main():
     glutDisplayFunc(display)
     glutReshapeFunc(reshape)
     glutKeyboardFunc(keyboard)
+    glutMotionFunc(motion)
     gl_init()
     glutMainLoop()
 
