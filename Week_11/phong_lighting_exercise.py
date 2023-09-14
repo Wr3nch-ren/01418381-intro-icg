@@ -6,22 +6,29 @@ import numpy as np
 import pandas as pd
 import imgui
 from imgui.integrations.glut import GlutRenderer
-from gl_helpers import *
+from gl_helpers_subst import *
 
 impl, vao = None, None
 shininess = 50
 Ka, Kd, Ks, clear_color = [0.05, 0.05, 0.05], [0.5, 1.0, 0.2], [0.9, 0.9, 0.9], [0.1, 0.6, 0.6]
 light_intensity, light_pos, eye_pos = [1, 1, 1], [0, 0, 0], [0, 0, 0]
 specular_on, selection = True, False
+rot_x, rot_y = 0, 0
 
 def draw_gui():
-    global selection, light_intensity, Ka, Kd, Ks, shininess, specular_on, clear_color
+    global selection, light_intensity, Ka, Kd, Ks, shininess, specular_on, clear_color, rot_x, rot_y
     impl.process_inputs()
     imgui.new_frame()                    # Start the Dear ImGui frame   
     imgui.begin("Control")               # Create a window
     imgui.push_item_width(300)
     _, light_intensity = imgui.color_edit3("Light Intensity", *light_intensity)
+    _, Ka = imgui.color_edit3("Ka", *Ka)
     _, Kd = imgui.color_edit3("Kd", *Kd)
+    _, Ks = imgui.color_edit3("Ks", *Ks)
+    _, shininess = imgui.slider_float("Shininess", shininess, 0.1, 180)
+    _, specular_on = imgui.checkbox("Specular Enabled", specular_on)
+    _, rot_x = imgui.slider_float("Rotation X", rot_x, -180, 180)
+    _, rot_y = imgui.slider_float("Rotation Y", rot_y, -180, 180)
     if imgui.radio_button("Choice 1", not selection): 
         selection = False
     imgui.same_line()
@@ -58,11 +65,22 @@ def reshape(w, h):
 def display():
     glClearColor(*clear_color, 0)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-    model_mat = Identity()
+    model_mat = Rotate(rot_y, 0, 1, 0) @ Rotate(rot_x, 1, 0, 0)
     view_mat = LookAt(*eye_pos, *centroid, 0, 1, 0)
+    
 
     glUseProgram(prog_id)
+    glUniform3fv(glGetUniformLocation(prog_id, "Ka"), 1, Ka)
     glUniform3fv(glGetUniformLocation(prog_id, "Kd"), 1, Kd)
+    glUniform3fv(glGetUniformLocation(prog_id, "Ks"), 1, Ks)
+    glUniform1f(glGetUniformLocation(prog_id, "shininess"), shininess)
+    glUniform1i(glGetUniformLocation(prog_id, "specular_on"), specular_on)
+    glUniform3fv(glGetUniformLocation(prog_id, "light_pos"), 1, light_pos)
+    glUniform3fv(glGetUniformLocation(prog_id, "eye_pos"), 1, eye_pos)
+    glUniform3fv(glGetUniformLocation(prog_id, "light_intensity"), 1, light_intensity)
+    glUniformMatrix4fv(glGetUniformLocation(prog_id, "model_mat"), 1, GL_TRUE, model_mat)
+    glUniformMatrix4fv(glGetUniformLocation(prog_id, "view_mat"), 1, GL_TRUE, view_mat)
+    glUniformMatrix4fv(glGetUniformLocation(prog_id, "proj_mat"), 1, GL_TRUE, proj_mat)
 
     glBindVertexArray(vao)
     glDrawArrays(GL_TRIANGLES, 0, n_vertices)
@@ -118,18 +136,33 @@ def create_shaders():
     frag_id = glCreateShader(GL_FRAGMENT_SHADER)
 
     vert_code = b'''
-#version 120
-attribute vec3 position;
-uniform vec3 Kd;
-varying vec3 phong_color;
+#version 150
+attribute vec3 position, normal, color;
+in vec2 uv;
+uniform vec3 Ka, Kd, Ks, eye_pos, light_pos, light_intensity;
+uniform float shininess;
+uniform mat4 model_mat, view_mat, proj_mat;
+uniform bool specular_on;
+out vec3 phong_color;
 void main()
 {
-    gl_Position = vec4(position, 1);
-    phong_color = Kd;
+    gl_Position = proj_mat * view_mat * model_mat * vec4(position, 1);
+    vec3 P = (model_mat * vec4(position, 1)).xyz;
+    vec3 L = normalize(light_pos - P);
+    vec3 V = normalize(eye_pos - P);
+    vec3 N = (model_mat * vec4(normal, 0)).xyz;
+    vec3 R = 2 * dot(L, N) * N - L;
+    
+    vec3 ambient = Ka * light_intensity;
+    vec3 diffuse = Kd * max(dot(N, L), 0) * light_intensity;
+    vec3 specular = Ks * pow(max(dot(V, R), 0), shininess) * light_intensity;
+    // if (dot(N, L) <= 0 || !specular_on)
+    //     specular = vec3(0, 0, 0);
+    phong_color = ambient + diffuse + specular;
 }'''
     frag_code = b'''
-#version 110
-varying vec3 phong_color;
+#version 150
+in vec3 phong_color;
 void main()
 {
    gl_FragColor = vec4(phong_color, 1);
@@ -152,7 +185,7 @@ void main()
     global n_vertices, positions, colors, normals, uvs, centroid, bbox
     global light_pos, eye_pos
 
-    df = pd.read_csv("../models/teapot.tri", delim_whitespace=True,
+    df = pd.read_csv("../models/teapot_culling.tri", delim_whitespace=True,
                      comment='#', header=None, dtype=np.float32)
     centroid = df.values[:, 0:3].mean(axis=0)
     bbox = df.values[:, 0:3].max(axis=0) - df.values[:, 0:3].min(axis=0)
