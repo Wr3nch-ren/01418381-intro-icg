@@ -152,7 +152,10 @@ void main()
 {
     gl_Position = proj_mat * view_mat * model_mat * vec4(position, 1);
     vP = (model_mat * vec4(position, 1)).xyz;
-    vN = (model_mat * vec4(normal, 0)).xyz;     
+    if (correct_normal_xform)
+        vN = (transpose(inverse(model_mat)) * vec4(normal, 0)).xyz;
+    else
+        vN = (model_mat * vec4(normal, 0)).xyz;     
 }'''
 
     frag_code = '''
@@ -162,7 +165,17 @@ uniform float shininess;
 in vec3 vP, vN;
 void main()
 {
-    gl_FragColor = vec4(0, 1, 1, 1);
+    vec3 L = normalize(light_pos - vP);
+    vec3 V = normalize(eye_pos - vP);
+    vec3 N = normalize(vN);
+    vec3 R = 2 * dot(L, N) * N - L;
+    
+    vec3 ambient = Ka * I;
+    vec3 diffuse = Kd * max(dot(N, L), 0) * I;
+    vec3 specular = Ks * pow(max(dot(V, R), 0), shininess) * I;
+    if (dot(N, L) <= 0)
+        specular = vec3(0, 0, 0);
+    gl_FragColor.rgb = ambient + diffuse + specular;
 }'''
 
     vert_id = glCreateShader(GL_VERTEX_SHADER)

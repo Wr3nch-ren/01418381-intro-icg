@@ -151,10 +151,6 @@ def create_shaders():
 in vec3 position, normal, color;
 in vec2 uv;
 uniform mat4 model_mat, view_mat, proj_mat;
-// uniform vec3 I, light_pos, eye_pos, Ka, Kd, bKd, Ks;
-// uniform float shininess;
-// uniform bool two_sided_lighting, use_blinn_specular;
-// out vec3 fcolor;
 out vec3 fP, fN;
 void main()
 {
