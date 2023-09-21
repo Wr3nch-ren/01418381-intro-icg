@@ -1,4 +1,4 @@
-import sys, os
+import sys, osc
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
@@ -196,7 +196,7 @@ def create_shaders():
     uniform float shininess;
     uniform mat4 model_mat, view_mat, proj_mat;
     uniform bool specular_on;
-    out vec3 phong_color;
+    out vec3 phong_color, front_color, back_color;
     void main()
     {
         gl_Position = proj_mat * view_mat * model_mat * vec4(position, 1);
@@ -212,14 +212,25 @@ def create_shaders():
         //if (dot(N, L) <= 0 || !specular_on)
         if (!specular_on)
             specular = vec3(0, 0, 0);
-        phong_color = ambient + diffuse + specular;
+        else
+            phong_color = ambient + diffuse + specular;
+            //front_color =  ambient + diffuse + specular;
+        //vec3 diffuse_back = Kd_back * max(dot(-N, L), 0) * light_intensity;
+        //if (dot(-N, L) <= 0 || !specular_on)
+        if (!specular_on)
+            specular = vec3(0, 0, 0);
+        else
+            //back_color =  ambient + diffuse_back + specular;
     }'''
         frag_code = b'''
     #version 150
-    in vec3 phong_color;
+    in vec3 phong_color, front_color, back_color;
     void main()
     {
         gl_FragColor = vec4(phong_color, 1);
+        if(gl_FrontFacing){
+            gl_FragColor = frontColor;
+        }
     }'''
         
         
