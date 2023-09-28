@@ -172,7 +172,11 @@ void main()
     vP = (model_mat *  vec4(position, 1)).xyz;
     vN = (transpose(inverse(model_mat)) * vec4(normal,0)).xyz;
     bunny_tex_coord = uv;
-    brick_tex_coord = uv;
+    brick_tex_coord = uv + uv_translate;
+    brick_tex_coord *= uv_scale;
+    float angle = uv_rotate/180*3.14159265358979323846;
+    mat2 rot_mat = mat2(cos(angle), sin(angle), -sin(angle), cos(angle));
+    brick_tex_coord *= rot_mat;
 }'''
 
     frag_code = '''
@@ -186,9 +190,23 @@ out vec4 frag_color;
 
 void main()
 {
-    vec3 Kd = texture(bunny_hair, bunny_tex_coord).rgb;
+    vec3 L = normalize(light_pos - vP);
+    vec3 N = normalize(vN);
+    vec3 V = normalize(eye_pos - vP);
+    vec3 H = normalize(L + V);
+    vec3 ambient = Ka * I;
+    vec3 tex_color = mix(texture(brick, brick_tex_coord),
+                        texture(bunny_hair, bunny_tex_coord),
+                        blend_factor).rgb;
+    //vec3 diffuse = Kd * max(0, dot(N, L)) * I;
+    vec3 diffuse = tex_color * max(0, dot(N, L)) * I; //If texture is too dark
+    vec3 specular = Ks * pow(max(0, dot(N, H)), shininess) * I;
+    if (dot(N, L) <= 0)
+        specular = vec3(0, 0, 0);
 
-    frag_color.rgb =  Kd;
+    vec3 phong_color = ambient + diffuse + specular;
+    
+    frag_color.rgb =  phong_color * texture(bunny_hair, bunny_tex_coord).rgb;
 }'''
     glShaderSource(vert_id, vert_code)
     glShaderSource(frag_id, frag_code)
@@ -253,9 +271,13 @@ void main()
         glVertexAttribPointer(uv_loc, 2, GL_FLOAT, GL_FALSE, 0, c_void_p(0))
         glEnableVertexAttribArray(uv_loc)
         
-    bunny_unit = load_texture("../texture_map/bunny_hair.jpg", GL_TEXTURE1)
+    bunny_unit = load_texture("../texture_map/bunny_hair.jpg", GL_TEXTURE1) # bunny texture
+    # bunny_unit = load_texture("../texture_map/black.jpg", GL_TEXTURE1) # dark texture
     brick_unit = load_texture("../texture_map/brick_wall_small.jpg", GL_TEXTURE2)
-
+    loc = glGetUniformLocation(prog_id, "bunny_hair")
+    glUniform1i(loc, bunny_unit)
+    loc = glGetUniformLocation(prog_id, "brick")
+    glUniform1i(loc, brick_unit)
 def main():
     glutInit(sys.argv)
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH)
